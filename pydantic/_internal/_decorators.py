@@ -27,6 +27,10 @@ if TYPE_CHECKING:
     from ._config import ConfigWrapper
 
 
+ValidatorModes: TypeAlias = Literal['before', 'after', 'wrap', 'plain', 'full_wrap']
+"""Every validator mode accepted by :func:`inspect_validator`."""
+
+
 @dataclass(slots=True)
 class FieldValidatorDecoratorInfo:
     """A container for data from `@field_validator` so that we can access it
@@ -103,7 +107,7 @@ class ModelValidatorDecoratorInfo:
     """
 
     decorator_repr: ClassVar[str] = '@model_validator'
-    mode: Literal['wrap', 'before', 'after']
+    mode: Literal['wrap', 'before', 'after', 'full_wrap']
 
 
 DecoratorInfo: TypeAlias = 'FieldValidatorDecoratorInfo | FieldSerializerDecoratorInfo | ModelSerializerDecoratorInfo | ModelValidatorDecoratorInfo | ComputedFieldInfo'
@@ -515,9 +519,7 @@ def _decorator_infos_for_class(
     return res, to_replace
 
 
-def inspect_validator(
-    validator: Callable[..., Any], *, mode: FieldValidatorModes, type: Literal['field', 'model']
-) -> bool:
+def inspect_validator(validator: Callable[..., Any], *, mode: ValidatorModes, type: Literal['field', 'model']) -> bool:
     """Look at a field or model validator function and determine whether it takes an info argument.
 
     An error is raised if the function has an invalid signature.
@@ -537,7 +539,7 @@ def inspect_validator(
         # In this case, we assume no info argument is present:
         return False
     n_positional = count_positional_required_params(sig)
-    if mode == 'wrap':
+    if mode in {'wrap', 'full_wrap'}:
         if n_positional == 3:
             return True
         elif n_positional == 2:
